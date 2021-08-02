@@ -40,3 +40,9 @@ to access js variable in server.js
 ex: ```
 res.render('user-profile', objectWithValuesForUser-profile)
 
+
+
+** look up ps aux | grep node
+
+
+### ejs files must go within views folder
