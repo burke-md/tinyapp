@@ -1,42 +1,49 @@
-const express = require('express');
+const express = require("express");
 const app = express();
 const PORT = 3001;
-
+const bodyParser = require("body-parser");
+//OLD WAY?? app.use(bodyparser.urlencoded({ extended: true}))
+app.use(express.urlencoded({extended: true}));
+ 
 app.set("view engine", "ejs");
-
-const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+//generate randomkey
+const generateRandomString = () => {
+  return Math.random().toString(20).substr(2, 6)
 }
 
-///// display shorturl 
-app.get("/urls/:shortURL", (req, res) => {
+const urlDatabase = {
+  b2xVn2: "http://www.lighthouselabs.ca",
+  "9sm5xK": "http://www.google.com",
+};
 
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+//// display newurl
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new")
+})
+
+
+///// display shorturl
+app.get("/urls/:shortURL", (req, res) => {
+  const templateVars = {
+    shortURL: req.params.shortURL,
+    longURL: urlDatabase[req.params.shortURL],
+  };
 
   res.render("urls_show", templateVars);
 });
-
-
-
-
-
-
 
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
 
+app.post("/urls",(req, res) => {
+  console.log(req.body);
+  res.send("ok")
+})
 
-app.get("/", (req,res) => {
-  res.send('hello')
-});
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
 
 app.listen(PORT, () => {
-  console.log(`Test app. Listening on port ${PORT}.`)
-})
+  console.log(`Test app. Listening on port ${PORT}.`);
+});
