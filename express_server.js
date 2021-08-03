@@ -2,11 +2,6 @@ const express = require("express");
 const app = express();
 const PORT = 3001;
 const bodyParser = require("body-parser");
-//OLD WAY?? app.use(bodyparser.urlencoded({ extended: true}))
-////
-//deleting urls needs some help in urls_index line 29
-
-////
 app.use(express.urlencoded({ extended: true }));
 
 app.set("view engine", "ejs");
@@ -21,6 +16,20 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com",
 };
 
+//// update existing post db
+app.post('/urls/:id', (req, res) => {
+  const id = req.params.id;
+  const updateLongURL = req.body.longURL
+  // console.log("\n UPDATE HAS BEEN HIT\n")
+  // console.log('id: ', id);
+  // console.log('update from body. fix this path: ', updateLongURL);
+  //update data base
+  console.log("db obj: \n", urlDatabase)
+  urlDatabase[id] = updateLongURL
+  console.log("updated db obj: \n", urlDatabase)
+});
+
+
 //// deleteurl postdelete
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
@@ -32,7 +41,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
-
+//// create new url
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   const longURL = req.body.longURL;
