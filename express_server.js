@@ -1,9 +1,10 @@
 const express = require("express");
 const app = express();
+const cookieParser = require('cookie-parser');
 const PORT = 3001;
 const bodyParser = require("body-parser");
 app.use(express.urlencoded({ extended: true }));
-
+app.use (cookieParser());
 app.set("view engine", "ejs");
 
 //generate randomkey
@@ -20,13 +21,8 @@ const urlDatabase = {
 app.post('/urls/:id', (req, res) => {
   const id = req.params.id;
   const updateLongURL = req.body.longURL
-  // console.log("\n UPDATE HAS BEEN HIT\n")
-  // console.log('id: ', id);
-  // console.log('update from body. fix this path: ', updateLongURL);
-  //update data base
-  console.log("db obj: \n", urlDatabase)
   urlDatabase[id] = updateLongURL
-  console.log("updated db obj: \n", urlDatabase)
+
 });
 
 
@@ -37,36 +33,58 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect(`/urls`);
 });
 
+//// signin cookie
+app.post("/login", (req, res) => {
+  const value = req.body.username;
+  // console.log("\n LOGIN END POINT HIT"  
+  // set new cookie
+  res.cookie("username", value)
+  res.redirect(`/urls`);
+})
+
+//// signout remove cookie
+app.post('/logout', (req, res) => {
+  console.log('\nLOGOUT END POINT HAS BEENHIT \n')
+  res.clearCookie('username');
+  res.redirect(`/urls`);
+})
+
 //// display newurl
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = {
+    username: req.cookies["username"]
+  }
+  res.render("urls_new", templateVars);
 });
+
+
 //// create new url
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   const longURL = req.body.longURL;
   urlDatabase[shortURL] = longURL;
 
-  console.log("database", urlDatabase);
-  console.log("longurl form db", urlDatabase[shortURL]);
-
   res.redirect(`/urls/${shortURL}`);
 });
+
 ///// display shorturl
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL];
-
   const templateVars = {
+    username: req.cookies["username"],
     shortURL,
     longURL,
   };
-
   res.render("urls_show", templateVars);
 });
 
+//// show existing urls
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = {
+    username: req.cookies["username"],
+     urls: urlDatabase 
+    };
   res.render("urls_index", templateVars);
 });
 
