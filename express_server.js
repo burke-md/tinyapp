@@ -73,6 +73,15 @@ const lookupPass = (email, password) => {
   }
   return false
 }
+////HELPER does short link exist? return t/v
+const isGoodLink = (link) => {
+  for (const item in urlDatabase) {
+    if( item === link) {
+      return true;
+    }
+  }
+  return false;
+}
 
 //// HELPER generate randomkey
 const generateRandomString = () => {
@@ -133,7 +142,7 @@ app.get("/urls/new", (req, res) => {
   res.redirect(`/login`)
 });
 
-///good??
+///good
 //// create new url
 app.post("/urls", (req, res) => {
   const userId = req.cookies["user_id"]
@@ -160,15 +169,22 @@ if (userId) {
 ///// display shorturl
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL].longURL;
+  const shortExists = isGoodLink(shortURL);
 
+  if (!shortExists){
+    return res.status(404).send('Short url does not exist')
+  }
+
+  const longURL = urlDatabase[shortURL].longURL;
   const userId = req.cookies["user_id"]
-  const templateVars = {
-    user: users[userId],
-    shortURL,
-    longURL,
-  };
-  res.render("urls_show", templateVars);
+
+    const templateVars = {
+      user: users[userId],
+      shortURL,
+      longURL,
+   
+    }
+    res.render("urls_show", templateVars);
 });
 
 //// show existing urls
