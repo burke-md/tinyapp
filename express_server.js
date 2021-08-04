@@ -8,8 +8,14 @@ app.use (cookieParser());
 app.set("view engine", "ejs");
 
 const urlDatabase = {
-  b2xVn2: "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
+  b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "aJ48lW"
+  },
+  i3BoGr: {
+      longURL: "https://www.google.com",
+      userID: "aJ48lW"
+  }
 };
 //// users object
 const users = {
@@ -73,16 +79,17 @@ const generateRandomString = () => {
   return Math.random().toString(20).substr(2, 6);
 };
 
-
+////good
 //// update existing post db
 app.post('/urls/:id', (req, res) => {
   const id = req.params.id;
   const updateLongURL = req.body.longURL
-  urlDatabase[id] = updateLongURL
 
+  urlDatabase[id].longURL = updateLongURL
+  res.redirect(`/urls`)
 });
 
-
+//good
 //// deleteurl postdelete
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
@@ -90,6 +97,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect(`/urls`);
 });
 
+//good
 //// login cookie login post
 app.post("/login", (req, res) => {
   const userEmail = req.body.email;
@@ -97,47 +105,63 @@ app.post("/login", (req, res) => {
   const userIdFrDb = lookupEmail(userEmail);
   const emailPassValidated = lookupPass(userEmail, userPass);
 
-  
- 
-  // set new cookie and redirrect
   if (emailPassValidated){
     return res.cookie("user_id", userIdFrDb).redirect(`/urls`);
   } else {
     return res.sendStatus(403);
   }
   
-}) 
-
+}); 
+//good
 //// signout remove cookie
 app.post('/logout', (req, res) => {
-  console.log('\nLOGOUT END POINT HAS BEENHIT \n')
   res.clearCookie('user_id');
   res.redirect(`/urls`);
 })
 
+//good
 //// display newurl
 app.get("/urls/new", (req, res) => {
   const userId = req.cookies["user_id"]
   const templateVars = {
     user: users[userId]
   }
-  res.render("urls_new", templateVars);
+
+  if(userId) {
+    return res.render("urls_new", templateVars);
+  }
+  res.redirect(`/login`)
 });
 
-
+///good??
 //// create new url
 app.post("/urls", (req, res) => {
+  const userId = req.cookies["user_id"]
   const shortURL = generateRandomString();
-  const longURL = req.body.longURL;
-  urlDatabase[shortURL] = longURL;
+  const fullURL = req.body.longURL;
+
+  const newOBJ = 
+  {
+    longURL: fullURL,
+    userID: userId
+  }
+
+if (userId) {
+    urlDatabase[shortURL] = newOBJ
+  } else {
+    return res.sendStatus(403)
+  }
 
   res.redirect(`/urls/${shortURL}`);
 });
 
+
+//good
 ///// display shorturl
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL];
+  const longURL = urlDatabase[shortURL].longURL;
+
   const userId = req.cookies["user_id"]
   const templateVars = {
     user: users[userId],
@@ -157,7 +181,7 @@ app.get("/urls", (req, res) => {
 
   res.render("urls_index", templateVars);
 });
-
+///good
 //// register page
 app.get("/register", (req, res) => {
   const userId = req.cookies["user_id"]
@@ -166,13 +190,17 @@ app.get("/register", (req, res) => {
   }
   res.render("register", templateVars)
 })
-
+/// good
 //// login page get
 app.get("/login", (req, res) => {
   const userId = req.cookies["user_id"]
   const templateVars = {
     user: users[userId]
   }
+  if (userId) {
+    return res.redirect(`/urls`);
+  }
+
   res.render("login", templateVars)
 
 })
@@ -185,7 +213,7 @@ app.post("/register", (req, res) => {
   const userPassword = req.body.password;
   const userPassValidated = validateString(userEmail, userPassword);
   const emailValidated = validateEmail(userEmail);
-  //ERROR checking
+
   if(!userPassValidated){
     console.log("\n\n INVALIDE ENTRY")
     return res.status(400).send('STATUS CODE 400 INVALIDE ENTRY');
