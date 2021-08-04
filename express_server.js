@@ -7,11 +7,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use (cookieParser());
 app.set("view engine", "ejs");
 
-//generate randomkey
-const generateRandomString = () => {
-  return Math.random().toString(20).substr(2, 6);
-};
-
 const urlDatabase = {
   b2xVn2: "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com",
@@ -19,9 +14,9 @@ const urlDatabase = {
 //// users object
 const users = {
 
-  "userRandomID": {
+  "1": {
     id: "1", 
-    email: "1@e1", 
+    email: "1@1", 
     password: "1"
   },
  "user2RandomID": {
@@ -30,6 +25,54 @@ const users = {
     password: "dishwasher-funk"
   }
 }
+//// HELPER register route
+const validateString = (str1, str2) => {
+  if (!str1 || !str2){
+    return false
+  }
+  return true
+};
+
+////HELPER registration route
+const validateEmail = (newUser) => {
+  for (const userObj in users) {
+    if(users[userObj].email === newUser) {
+      return false
+    } 
+  }
+  return true
+};
+
+//// HELPER set cookie at login. Will return userId from db
+const lookupEmail = (findThisEmail) => {
+  let Id = null;
+  for (const user in users) {
+    const lookupEmail = users[user].email;
+    
+    if (lookupEmail === findThisEmail) {
+      // console.log("email match")
+      // console.log("user_id: ", users[user].id)
+      Id = users[user].id;
+    }
+  }
+  return Id
+}
+////HELPER validate pass and emial match. return t/f
+const lookupPass = (email, password) => {
+
+  for (const user in users) {
+    if(users[user].email === email) {  
+      return (users[user].password === password ? true : false)
+    }
+  }
+  return false
+}
+
+//// HELPER generate randomkey
+const generateRandomString = () => {
+  return Math.random().toString(20).substr(2, 6);
+};
+
 
 //// update existing post db
 app.post('/urls/:id', (req, res) => {
@@ -47,26 +90,36 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect(`/urls`);
 });
 
-//// signin cookie
+//// login cookie login post
 app.post("/login", (req, res) => {
-  const value = req.body.username;
-  // console.log("\n LOGIN END POINT HIT"  
-  // set new cookie
-  res.cookie("username", value)
-  res.redirect(`/urls`);
-})
+  const userEmail = req.body.email;
+  const userPass = req.body.password;
+  const userIdFrDb = lookupEmail(userEmail);
+  const emailPassValidated = lookupPass(userEmail, userPass);
+
+  
+ 
+  // set new cookie and redirrect
+  if (emailPassValidated){
+    return res.cookie("user_id", userIdFrDb).redirect(`/urls`);
+  } else {
+    return res.sendStatus(403);
+  }
+  
+}) 
 
 //// signout remove cookie
 app.post('/logout', (req, res) => {
   console.log('\nLOGOUT END POINT HAS BEENHIT \n')
-  res.clearCookie('username');
+  res.clearCookie('user_id');
   res.redirect(`/urls`);
 })
 
 //// display newurl
 app.get("/urls/new", (req, res) => {
+  const userId = req.cookies["user_id"]
   const templateVars = {
-    user: users["username"]
+    user: users[userId]
   }
   res.render("urls_new", templateVars);
 });
@@ -85,8 +138,9 @@ app.post("/urls", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL];
+  const userId = req.cookies["user_id"]
   const templateVars = {
-    user: users["username"],
+    user: users[userId],
     shortURL,
     longURL,
   };
@@ -95,42 +149,61 @@ app.get("/urls/:shortURL", (req, res) => {
 
 //// show existing urls
 app.get("/urls", (req, res) => {
-  const userId = req.cookies["username"]
+  const userId = req.cookies["user_id"]
   const templateVars = {
     user: users[userId],
      urls: urlDatabase 
     };
-
-    console.log("\n templateVars.user: \n", templateVars.user)
 
   res.render("urls_index", templateVars);
 });
 
 //// register page
 app.get("/register", (req, res) => {
+  const userId = req.cookies["user_id"]
   const templateVars = {
-    user: users["username"]
+    user: users[userId]
   }
   res.render("register", templateVars)
+})
+
+//// login page get
+app.get("/login", (req, res) => {
+  const userId = req.cookies["user_id"]
+  const templateVars = {
+    user: users[userId]
+  }
+  res.render("login", templateVars)
+
 })
 
 
 //// endpoint for new register
 app.post("/register", (req, res) => {
-
   const userId = generateRandomString();
   const userEmail = req.body.email;
   const userPassword = req.body.password;
+  const userPassValidated = validateString(userEmail, userPassword);
+  const emailValidated = validateEmail(userEmail);
+  //ERROR checking
+  if(!userPassValidated){
+    console.log("\n\n INVALIDE ENTRY")
+    return res.status(400).send('STATUS CODE 400 INVALIDE ENTRY');
+  }
+
+  if(!emailValidated){
+    console.log("\n\n INVALIDE EMAIL")
+
+    return res.status(400).send('STATUS CODE 400 EMAIL ALREADY REGISTERED');
+  }
 
   users[userId] = {
     id: userId,
     email: userEmail,
     password: userPassword
   }
-  res.cookie("username", userId)
 
-  console.log("\nupdates user db: \n", users[userId])
-
+  res.cookie("user_id", userId)
   res.redirect(`/urls`);
 })
 
