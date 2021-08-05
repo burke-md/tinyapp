@@ -4,9 +4,9 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["Main /urls page"](#)
+!["Register new user"](https://github.com/burke-md/tinyapp/blob/master/docs/TinnyApp-Register.png?raw=true)
 
-!["Edit and Delete options"](#)
+!["View accoutn specific urls"](https://github.com/burke-md/tinyapp/blob/master/docs/TinnyApp-urls.png?raw=true)
 
 ## Dependencies
 
@@ -21,3 +21,4 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 - Install all dependencies (using the `npm install` command).
 - Run the development web server using the `node express_server.js` command.
+- This project has been run on port 3001. Feel free to change to 8080 vis CONST PORT at top of express_server.js
