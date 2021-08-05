@@ -1,10 +1,19 @@
 const express = require("express");
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
+const getUserByEmail = require("./helpers.js");
 const bcrypt = require('bcrypt');
+
 const app = express();
 const PORT = 3001;
+
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieSession(
+  {
+    name: "session",
+    keys: ["key1", "key2"],
+  })
+);
+
 app.set("view engine", "ejs");
 
 const urlDatabase = {
@@ -17,7 +26,7 @@ const urlDatabase = {
     userID: "aJ48lW",
   },
 };
-//// users object
+
 const users = {
   1: {
     id: "1",
@@ -30,52 +39,20 @@ const users = {
     password: "dishwasher-funk",
   },
 };
-//// HELPER register route
-const validateString = (str1, str2) => {
-  if (!str1 || !str2) {
-    return false;
-  }
-  return true;
-};
 
-////HELPER registration route
-const validateEmail = (newUser) => {
-  for (const userObj in users) {
-    if (users[userObj].email === newUser) {
-      return false;
-    }
-  }
-  return true;
-};
 
-//// HELPER set cookie at login. Will return userId from db
-const lookupEmail = (findThisEmail) => {
-  let Id = null;
-  for (const user in users) {
-    const lookupEmail = users[user].email;
-
-    if (lookupEmail === findThisEmail) {
-      // console.log("email match")
-      // console.log("user_id: ", users[user].id)
-      Id = users[user].id;
-    }
-  }
-  return Id;
-};
-////HELPER validate pass and emial match. return t/f
+//HELPER validate pass and emial match. return t/f
 const lookupPass = (testEmail, testPass) => {
   for (const user in users) {
-
     if (users[user].email === testEmail) {
-
       const storedPass = users[user].password;
       return bcrypt.compareSync(testPass, storedPass);
-      
     }
   }
   return false;
 };
-////HELPER does short link exist? return t/v
+
+//HELPER does short link exist? return t/v
 const isGoodLink = (link) => {
   for (const item in urlDatabase) {
     if (item === link) {
@@ -85,12 +62,12 @@ const isGoodLink = (link) => {
   return false;
 };
 
-//// HELPER generate randomkey
+//HELPER generate randomkey
 const generateRandomString = () => {
   return Math.random().toString(20).substr(2, 6);
 };
 
-//// HELPER returns obj w/ only items that qualify
+//HELPER returns filtered object
 const filterDb = (userId) => {
   let newObj = {};
   for (const item in urlDatabase) {
@@ -101,49 +78,60 @@ const filterDb = (userId) => {
   return newObj;
 };
 
-//// update existing post db
+//Update existing url POST
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
   const updateLongURL = req.body.longURL;
-
   urlDatabase[id].longURL = updateLongURL;
   res.redirect(`/urls`);
 });
 
-//// deleteurl postdelete
+
+//Delete url POST
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.userId;
   const shortURL = req.params.shortURL;
   if (urlDatabase[shortURL].userID === userId) {
-
     delete urlDatabase[shortURL];
   }
   res.redirect(`/urls`);
 });
 
-//// login cookie login post
+//Login POST
 app.post("/login", (req, res) => {
   const userEmail = req.body.email;
   const userPass = req.body.password;
-  const userIdFrDb = lookupEmail(userEmail);
+  const userIdFrDb = getUserByEmail(userEmail, users);
   const emailPassValidated = lookupPass(userEmail, userPass);
 
   if (emailPassValidated) {
-    return res.cookie("user_id", userIdFrDb).redirect(`/urls`);
+    //Set cookie
+    req.session.userId = userIdFrDb;
+
+    const userId = req.session.userId;
+    const templateVars = {
+      user: users[userId],
+    };
+   return  res.redirect(`/urls`);
+  
   } else {
-    return res.sendStatus(403);
+    res.send('<html><body><h4>You\'ve strayed form the happy path. Invalid email or pass</h4></body></html>')
   }
+
 });
 
-//// signout remove cookie
+
+//Logout POST
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  //Clear cookie
+  req.session = null;
   res.redirect(`/urls`);
 });
 
-//// display newurl
+//New url GET
 app.get("/urls/new", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.userId;
+
   const templateVars = {
     user: users[userId],
   };
@@ -154,9 +142,9 @@ app.get("/urls/new", (req, res) => {
   res.redirect(`/login`);
 });
 
-//// create new url
+//New url POST
 app.post("/urls", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.userId;
   const shortURL = generateRandomString();
   const fullURL = req.body.longURL;
 
@@ -174,11 +162,12 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
-///// display shorturl
-app.get("/urls/:shortURL", (req, res) => {
+//Redirect to long url GET
+app.get("/u/:shortURL", (req, res) => {
+  const userId = req.session.userId;
   const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[shortURL].longURL;
   const shortExists = isGoodLink(shortURL);
-  const userId = req.cookies["user_id"];
 
   if (!shortExists) {
     return res.status(404).send("Short url does not exist");
@@ -187,6 +176,31 @@ app.get("/urls/:shortURL", (req, res) => {
   let templateVars = {
     user: users[userId],
   };
+
+  if (!userId) {
+    return res.render(`noLogin`, templateVars);
+  }
+
+  if (urlDatabase[shortURL].userID === userId) {
+    res.redirect(longURL);
+  }
+  res.status(403).send("URL Does not belong to your account");
+});
+
+//Display short url GET
+app.get("/urls/:shortURL", (req, res) => {
+  const userId = req.session.userId;
+  const shortURL = req.params.shortURL;
+  const shortExists = isGoodLink(shortURL);
+
+  if (!shortExists) {
+    return res.status(404).send("<h4>Short url does not exist</h4>");
+  }
+
+  let templateVars = {
+    user: users[userId],
+  };
+
   if (!userId) {
     return res.render(`noLogin`, templateVars);
   }
@@ -198,15 +212,15 @@ app.get("/urls/:shortURL", (req, res) => {
       shortURL,
       longURL,
     };
-    res.render("urls_show", templateVars);
-  }
-  res.status(403).send("URL Does not belong to your account");
+    return res.render("urls_show", templateVars);
+  } 
+  res.status(403).send('<h4>URL Does not belong to your account</h4>');
 });
 
-//// show existing urls
+//Existing urls GET
 app.get("/urls", (req, res) => {
-  const userId = req.cookies["user_id"];
-  //return db w/ id only items
+  const userId = req.session.userId;
+
   const filteredUrlDatabase = filterDb(userId);
   const templateVars = {
     user: users[userId],
@@ -214,25 +228,24 @@ app.get("/urls", (req, res) => {
   };
 
   if (!userId) {
-    console.log("no log in redirect");
     return res.render(`noLogin`, templateVars);
   }
 
   res.render("urls_index", templateVars);
 });
 
-//// register page
+//Register page GET
 app.get("/register", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.userId;
   const templateVars = {
     user: users[userId],
   };
   res.render("register", templateVars);
 });
 
-//// login page get
+//Login GET
 app.get("/login", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.userId;
   const templateVars = {
     user: users[userId],
   };
@@ -243,24 +256,22 @@ app.get("/login", (req, res) => {
   res.render("login", templateVars);
 });
 
-//// endpoint for new register
+//Register POST
 app.post("/register", (req, res) => {
   const userId = generateRandomString();
   const userEmail = req.body.email;
   const userPassword = req.body.password;
-  const hashPassword = bcrypt.hashSync(userPassword, 10);
-  const userPassValidated = validateString(userEmail, userPassword);
-  const emailValidated = validateEmail(userEmail);
+  const salt = bcrypt.genSaltSync(10)
+  const hashPassword = bcrypt.hashSync(userPassword, salt);
+  
 
-  if (!userPassValidated) {
-    console.log("\n\n INVALIDE ENTRY");
-    return res.status(400).send("STATUS CODE 400 INVALIDE ENTRY");
+  if (!userEmail || !userPassword) {
+    return res.status(400).send("Invalid email or password. Login <a href='/register'>here.</a> ");
   }
 
-  if (!emailValidated) {
-    console.log("\n\n INVALIDE EMAIL");
+  if (getUserByEmail(userEmail, users)) {
 
-    return res.status(400).send("STATUS CODE 400 EMAIL ALREADY REGISTERED");
+    return res.status(400).send("<h4>Email exists in system.</h4>");
   }
 
   users[userId] = {
@@ -269,9 +280,11 @@ app.post("/register", (req, res) => {
     password: hashPassword,
   };
 
-  res.cookie("user_id", userId);
+  //Set cookie
+  req.session.userId = userId;
   res.redirect(`/urls`);
 });
+
 
 app.listen(PORT, () => {
   console.log(`Test app. Listening on port ${PORT}.`);
