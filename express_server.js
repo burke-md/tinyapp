@@ -1,8 +1,8 @@
 const express = require("express");
-const app = express();
 const cookieParser = require("cookie-parser");
+const bcrypt = require('bcrypt');
+const app = express();
 const PORT = 3001;
-const bodyParser = require("body-parser");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.set("view engine", "ejs");
@@ -63,10 +63,14 @@ const lookupEmail = (findThisEmail) => {
   return Id;
 };
 ////HELPER validate pass and emial match. return t/f
-const lookupPass = (email, password) => {
+const lookupPass = (testEmail, testPass) => {
   for (const user in users) {
-    if (users[user].email === email) {
-      return users[user].password === password ? true : false;
+
+    if (users[user].email === testEmail) {
+
+      const storedPass = users[user].password;
+      return bcrypt.compareSync(testPass, storedPass);
+      
     }
   }
   return false;
@@ -244,6 +248,7 @@ app.post("/register", (req, res) => {
   const userId = generateRandomString();
   const userEmail = req.body.email;
   const userPassword = req.body.password;
+  const hashPassword = bcrypt.hashSync(userPassword, 10);
   const userPassValidated = validateString(userEmail, userPassword);
   const emailValidated = validateEmail(userEmail);
 
@@ -261,7 +266,7 @@ app.post("/register", (req, res) => {
   users[userId] = {
     id: userId,
     email: userEmail,
-    password: userPassword,
+    password: hashPassword,
   };
 
   res.cookie("user_id", userId);
