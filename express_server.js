@@ -1,14 +1,14 @@
 const express = require("express");
 const cookieSession = require("cookie-session");
 const getUserByEmail = require("./helpers.js");
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 
 const app = express();
 const PORT = 3001;
 
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieSession(
-  {
+app.use(
+  cookieSession({
     name: "session",
     keys: ["key1", "key2"],
   })
@@ -39,7 +39,6 @@ const users = {
     password: "dishwasher-funk",
   },
 };
-
 
 //HELPER validate pass and emial match. return t/f
 const lookupPass = (testEmail, testPass) => {
@@ -78,26 +77,24 @@ const filterDb = (userId) => {
   return newObj;
 };
 
-//Update existing url POST
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
   const updateLongURL = req.body.longURL;
   urlDatabase[id].longURL = updateLongURL;
+
   res.redirect(`/urls`);
 });
 
-
-//Delete url POST
 app.post("/urls/:shortURL/delete", (req, res) => {
   const userId = req.session.userId;
   const shortURL = req.params.shortURL;
   if (urlDatabase[shortURL].userID === userId) {
     delete urlDatabase[shortURL];
   }
+
   res.redirect(`/urls`);
 });
 
-//Login POST
 app.post("/login", (req, res) => {
   const userEmail = req.body.email;
   const userPass = req.body.password;
@@ -109,26 +106,25 @@ app.post("/login", (req, res) => {
     req.session.userId = userIdFrDb;
 
     const userId = req.session.userId;
-    const templateVars = {
+    const templateVars = 
+    {
       user: users[userId],
     };
-   return  res.redirect(`/urls`);
-  
+    return res.redirect(`/urls`);
   } else {
-    res.send('<html><body><h4>You\'ve strayed form the happy path. Invalid email or pass</h4></body></html>')
+    res.send(
+      "<h4>You've strayed form the happy path. Invalid email or pass</h4>"
+    );
   }
-
 });
 
-
-//Logout POST
 app.post("/logout", (req, res) => {
   //Clear cookie
   req.session = null;
+
   res.redirect(`/urls`);
 });
 
-//New url GET
 app.get("/urls/new", (req, res) => {
   const userId = req.session.userId;
 
@@ -137,12 +133,12 @@ app.get("/urls/new", (req, res) => {
   };
 
   if (userId) {
-    return res.render("urls_new", templateVars);
+    return res.render("./partials/urls_new", templateVars);
   }
+
   res.redirect(`/login`);
 });
 
-//New url POST
 app.post("/urls", (req, res) => {
   const userId = req.session.userId;
   const shortURL = generateRandomString();
@@ -162,7 +158,7 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
-//Redirect to long url GET
+
 app.get("/u/:shortURL", (req, res) => {
   const userId = req.session.userId;
   const shortURL = req.params.shortURL;
@@ -178,7 +174,7 @@ app.get("/u/:shortURL", (req, res) => {
   };
 
   if (!userId) {
-    return res.render(`noLogin`, templateVars);
+    return res.render(`./partials/noLogin`, templateVars);
   }
 
   if (urlDatabase[shortURL].userID === userId) {
@@ -187,7 +183,7 @@ app.get("/u/:shortURL", (req, res) => {
   res.status(403).send("URL Does not belong to your account");
 });
 
-//Display short url GET
+
 app.get("/urls/:shortURL", (req, res) => {
   const userId = req.session.userId;
   const shortURL = req.params.shortURL;
@@ -202,8 +198,9 @@ app.get("/urls/:shortURL", (req, res) => {
   };
 
   if (!userId) {
-    return res.render(`noLogin`, templateVars);
+    return res.render(`./partials/noLogin`, templateVars);
   }
+
   if (urlDatabase[shortURL].userID === userId) {
     const longURL = urlDatabase[shortURL].longURL;
 
@@ -212,65 +209,64 @@ app.get("/urls/:shortURL", (req, res) => {
       shortURL,
       longURL,
     };
-    return res.render("urls_show", templateVars);
-  } 
-  res.status(403).send('<h4>URL Does not belong to your account</h4>');
+    return res.render("./partials/urls_show", templateVars);
+  }
+  res.status(403).send("<h4>URL Does not belong to your account</h4>");
 });
 
-//Existing urls GET
 app.get("/urls", (req, res) => {
   const userId = req.session.userId;
-
   const filteredUrlDatabase = filterDb(userId);
-  const templateVars = {
+  const templateVars = 
+  {
     user: users[userId],
     urls: filteredUrlDatabase,
   };
 
   if (!userId) {
-    return res.render(`noLogin`, templateVars);
+    return res.render(`./partials/noLogin`, templateVars);
   }
 
-  res.render("urls_index", templateVars);
+  res.render("./partials/urls_index", templateVars);
 });
 
-//Register page GET
+
 app.get("/register", (req, res) => {
   const userId = req.session.userId;
   const templateVars = {
     user: users[userId],
   };
-  res.render("register", templateVars);
+  res.render("./partials/register", templateVars);
 });
 
-//Login GET
 app.get("/login", (req, res) => {
   const userId = req.session.userId;
-  const templateVars = {
+  const templateVars = 
+  {
     user: users[userId],
   };
   if (userId) {
     return res.redirect(`/urls`);
   }
 
-  res.render("login", templateVars);
+  res.render("./partials/login", templateVars);
 });
 
-//Register POST
+
 app.post("/register", (req, res) => {
   const userId = generateRandomString();
   const userEmail = req.body.email;
   const userPassword = req.body.password;
-  const salt = bcrypt.genSaltSync(10)
+  const salt = bcrypt.genSaltSync(10);
   const hashPassword = bcrypt.hashSync(userPassword, salt);
-  
 
   if (!userEmail || !userPassword) {
-    return res.status(400).send("Invalid email or password. Login <a href='/register'>here.</a> ");
+    return res
+      .status(400)
+      .send("Invalid email or password. Login <a href='/register'>here.</a> ");
   }
 
   if (getUserByEmail(userEmail, users)) {
-
     return res.status(400).send("<h4>Email exists in system.</h4>");
   }
 
@@ -284,7 +280,6 @@ app.post("/register", (req, res) => {
   req.session.userId = userId;
   res.redirect(`/urls`);
 });
-
 
 app.listen(PORT, () => {
   console.log(`Test app. Listening on port ${PORT}.`);
