@@ -106,8 +106,7 @@ app.post("/login", (req, res) => {
     req.session.userId = userIdFrDb;
 
     const userId = req.session.userId;
-    const templateVars = 
-    {
+    const templateVars = {
       user: users[userId],
     };
     return res.redirect(`/urls`);
@@ -158,31 +157,16 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
-
 app.get("/u/:shortURL", (req, res) => {
-  const userId = req.session.userId;
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL].longURL;
   const shortExists = isGoodLink(shortURL);
 
   if (!shortExists) {
-    return res.status(404).send("Short url does not exist");
+    return res.status(404).send("<h4>Short url does not exist</h4>");
   }
-
-  let templateVars = {
-    user: users[userId],
-  };
-
-  if (!userId) {
-    return res.render(`./partials/noLogin`, templateVars);
-  }
-
-  if (urlDatabase[shortURL].userID === userId) {
-    res.redirect(longURL);
-  }
-  res.status(403).send("URL Does not belong to your account");
+  const longURL = urlDatabase[shortURL].longURL;
+  res.redirect(longURL);
 });
-
 
 app.get("/urls/:shortURL", (req, res) => {
   const userId = req.session.userId;
@@ -217,8 +201,7 @@ app.get("/urls/:shortURL", (req, res) => {
 app.get("/urls", (req, res) => {
   const userId = req.session.userId;
   const filteredUrlDatabase = filterDb(userId);
-  const templateVars = 
-  {
+  const templateVars = {
     user: users[userId],
     urls: filteredUrlDatabase,
   };
@@ -230,7 +213,6 @@ app.get("/urls", (req, res) => {
   res.render("./partials/urls_index", templateVars);
 });
 
-
 app.get("/register", (req, res) => {
   const userId = req.session.userId;
   const templateVars = {
@@ -241,8 +223,7 @@ app.get("/register", (req, res) => {
 
 app.get("/login", (req, res) => {
   const userId = req.session.userId;
-  const templateVars = 
-  {
+  const templateVars = {
     user: users[userId],
   };
   if (userId) {
@@ -251,7 +232,6 @@ app.get("/login", (req, res) => {
 
   res.render("./partials/login", templateVars);
 });
-
 
 app.post("/register", (req, res) => {
   const userId = generateRandomString();
