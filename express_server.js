@@ -215,6 +215,11 @@ app.get("/urls", (req, res) => {
 
 app.get("/register", (req, res) => {
   const userId = req.session.userId;
+
+  if (userId) {
+    return res.redirect(`/urls`);
+  }
+
   const templateVars = {
     user: users[userId],
   };
